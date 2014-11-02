@@ -17,10 +17,11 @@ This plugin requires the following to be already installed and configured in ord
 ## How to install:
 
 * Clone the repository with either option
- * `git clone`
- * `zip file provided by github`
-* Extract or Copy the files into a new/empty folder and assign to that folder an appropriate name (for example, `pro6pp`).
-* Copy or Upload the folder inside the wordpress' plugin folder (ie: `myWordpressSite/includes/plugins/`).
+ * `zip file of the repository, provided by github`
+     - Extract or Copy the files into a new/empty folder and assign to that folder an appropriate name (for example, `pro6pp`).
+ * [zip file with only the required files](https://github.com/dcentralize/pro6pp-wordpress/zipball/stable)
+     - Can be installed directly on WordPress via the `Plugin->Add New` section.
+* Copy or Upload the folder inside the wordpress' plugin folder (ie: `myWordPressSite/wp-content/plugins/`).
 * Activate the plugin by visiting the administration page of your wordpress site and selecting to activate the pro6pp plugin.
 
 ## How to use:
@@ -29,7 +30,7 @@ This plugin requires the following to be already installed and configured in ord
 * Fill in your postcode.
 * Fill in your streetnumber.
 * Continue editing the rest of the fields.
-* The address related fields will be autocompleted automatically into the appropriate form fields.
+* The address related fields will be automatically filled with the appropriate fields.
 
 ## Contributing:
 
