@@ -1,0 +1,33 @@
+{
+  "name": "wp_js_tests",
+  "version": "0.1.0",
+  "description": "Test cases for the pro6pp wordpress plugin.",
+  "main": "Gruntfile.js",
+  "dependencies": {
+    "grunt": "~0.4.2"
+  },
+  "devDependencies": {
+    "grunt-casperjs": "~1.4.0",
+    "load-grunt-tasks": "~0.2.1",
+    "time-grunt": "~0.2.7",
+    "grunt-contrib-jshint": "~0.8.0",
+    "grunt-contrib-connect": "~0.6.0",
+    "grunt-contrib-watch": "~0.5.3"
+  },
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "../../.git"
+  },
+  "keywords": [
+    "tests",
+    "casperjs",
+    "phantomjs",
+    "pro6pp",
+    "wordpress"
+  ],
+  "author": "dcentralize",
+  "license": "GPL"
+}
