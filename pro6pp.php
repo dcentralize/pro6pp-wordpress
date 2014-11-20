@@ -147,28 +147,23 @@ class Pro6pp
                         'pro6pp_address_validation'
                 ));
 
-        // Create custom postcode and streetnumber fields.
-        add_filter('woocommerce_checkout_fields',
-                array(
-                        $this,
-                        'custom_override_checkout_fields'
-                ));
+        if (get_option('pro6pp_override_defaults', false)) {
+            // Create custom postcode and streetnumber fields.
+            add_filter('woocommerce_checkout_fields',
+                    array(
+                            $this,
+                            'pro6pp_override_checkout_fields'
+                    ));
+        }
 
-        // Manipulate the default address fields.
-        add_filter('woocommerce_default_address_fields',
-                array(
-                        $this,
-                        'custom_override_default_address_fields'
-                ));
-
-        // Add provinces for the supported countries.
-        add_filter('woocommerce_states',
-                array(
-                        $this,
-                        'custom_woocommerce_states'
-                ));
-
-        // add_filter();
+        if (get_option('pro6pp_override_address', false)) {
+            // Add provinces for the supported countries.
+            add_filter('woocommerce_states',
+                    array(
+                            $this,
+                            'pro6pp_woocommerce_states'
+                    ));
+        }
 
         // Ajax - Logged in users.
         add_action("wp_ajax_$this->_ajaxAction",
@@ -214,7 +209,7 @@ class Pro6pp
      *            An array holding the default states known to WC.
      * @return {array} The states after manipulation.
      */
-    function custom_woocommerce_states ($states)
+    function pro6pp_woocommerce_states ($states)
     {
         $provinces;
         foreach (self::$_countries as $cc => $province) {
@@ -236,7 +231,7 @@ class Pro6pp
      *            The default options for the address fields
      * @return {array} The input array manipulated
      */
-    function custom_override_default_address_fields ($address_fields)
+    function pro6pp_override_default_address_fields ($address_fields)
     {
         $address_fields['address_2']['label'] = __('Streetnumber',
                 'woocommerce');
@@ -255,7 +250,7 @@ class Pro6pp
      *            The checkout fields to render.
      * @return {array} The input array manipulated.
      */
-    function custom_override_checkout_fields ($groups)
+    function pro6pp_override_checkout_fields ($groups)
     {
         $add_after_this = '_company';
         $knownFields = array(
