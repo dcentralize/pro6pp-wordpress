@@ -452,6 +452,9 @@ class Pro6pp
      */
     private function error_occured ($msg)
     {
+        if (! headers_sent()) {
+            header("Content-Type: application/json");
+        }
         $this->_returnError['error']['message'] = __($msg,
                 'pro6pp_autocomplete');
         echo json_encode($this->_returnError);
