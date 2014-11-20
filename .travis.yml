@@ -1,38 +1,16 @@
-branches:
-  only:
-  - master
 language: php
+
 php:
-- '5.3'
+    - 5.3
+    - 5.4
+
 env:
-  matrix:
-  - WP_VERSION=master
-  global:
-  - secure: Woh7BmZy1g4G0NzgD405bko4/83jQiXzbiuOnwJD2BaMpG8JYjR5eb9AS3XhlH+ySZKOYm6i9Btz+uVuKAGZqNgr/gnQytWeY7UL1X74IfemuPlDS6W5eQAZ3NgfQAN50DE5kB9BfpEMIdlifM2GtYmkX+j+3k0KfG1bjwvK5yI=
-matrix:
-  include:
-  - php: '5.5'
-    env: WP_VERSION=master
-  - php: '5.4'
-    env: WP_VERSION=3.9
-  - php: '5.3'
-    env: WP_VERSION=3.8
-before_install:
-- sudo apt-get update
-install:
-- npm install -g grunt-cli
-- npm install -g casperjs
-- sudo apt-get install apache2 -y
-- sudo apt-get install libapache2-mod-php5 libapache2-mod-auth-mysql php5-mysql -y
+    - WP_VERSION=latest WP_MULTISITE=0
+    - WP_VERSION=latest WP_MULTISITE=1
+    - WP_VERSION=3.8 WP_MULTISITE=0
+    - WP_VERSION=3.8 WP_MULTISITE=1
+
 before_script:
-- export PLUGIN_SLUG=$(basename $(pwd))
-- export REPO_BASE=`pwd`
-- sh tests/.travis_config.sh
-- sh tests/.travis_before.sh
-- cd "$REPO_BASE/tests"
-- npm install
-script:
-- casperjs test bootstrap.js
-- sh .travis_run.sh
-after_success:
-- sh .travis_onSuccess.sh
+    - bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION 
+
+script: phpunit
