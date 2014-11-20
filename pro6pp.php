@@ -495,15 +495,14 @@ class Pro6pp
                     plugins_url('/js/pro6pp_reorder.js', __FILE__),
                     array(
                             'jquery',
-                            'woocommerce'
-                    ));
+                            'woocommerce',
+                            'wc-country-select'
+                    ),'',true);
             wp_register_script('pro6pp_autocomplete',
                     plugins_url('/js/pro6pp_autocomplete.js', __FILE__),
                     array(
-                            'jquery',
-                            'woocommerce',
                             'pro6pp_reorder'
-                    ));
+                    ), '', true);
 
             // Add the scripts to the page.
             wp_enqueue_script('pro6pp_reorder');
