@@ -14,6 +14,12 @@ class Pro6pp
 {
 
     /**
+     * The URL of the pro6pp API
+     * @var string
+     */
+    const api = 'http://api.pro6pp.nl/v1/autocomplete';
+
+    /**
      * The action name used to call the pro6pp asynchronously.
      *
      * @var string $_ajaxAction
@@ -302,26 +308,23 @@ class Pro6pp
     }
 
     /**
-     * Process the adress validation on submissionif it's supported
+     * Process the adress validation on submission if supported.
      */
     public function pro6pp_address_validation ()
     {
-        global $wp_http;
         // Check that fields were sent.
         if (empty($_REQUEST['billing_country']) || empty(
                 $_REQUEST['billing_postcode'])) {
             return;
         }
 
-        $api = 'http://api.pro6pp.nl/v1/autocomplete?';
-        $data = http_build_query(
-                array(
+        $data = array(
                         'auth_key' => get_option('pro6pp_auth_key', 'AUTH_KEY'),
                         'nl_sixpp' => wc_clean($_REQUEST['billing_postcode']),
                         'streetnumber' => wc_clean(
                                 $_REQUEST['billing_address_2'])
-                ), '', '&');
-        $url = $api . $data;
+                );
+        $url = $this->getApiUrl($data);
         $http = new WP_Http();
         $result = $http->request($url,
                 array( // Convert seconds to miliseconds.
@@ -413,17 +416,16 @@ class Pro6pp
         if (! $postcode || ! $streetNr) {
             $this->error_occured('Invalid postcode or Streetnumber');
         }
-        $api = 'http://api.pro6pp.nl/v1/autocomplete?';
-        $data = http_build_query(
-                array(
+
+        $data = array(
                         'auth_key' => $key,
                         'nl_sixpp' => $pMatches[0],
                         'streetnumber' => $sMatches[0]
-                ), '', '&');
+                );
         unset($pMatches, $sMatches);
+        $url = $this->getApiUrl($data);
 
         // Initiate the request to the pro6pp service.
-        $url = $api . $data;
         $pro6ppService = new WP_Http();
         $result = $pro6ppService->request($url,
                 array( // Convert seconds to miliseconds.
@@ -554,5 +556,19 @@ class Pro6pp
                         self::$_shipping);
             break;
         }
+    }
+
+    /**
+     * Get the URL to the pro6pp API.
+     * If an array is given, it will append the values as URL parameters.
+     *
+     * @param Array $args (Optional) An array of parameters to append to the
+     *            URL.
+     * @return string The URL to the API, with possible parameters.
+     */
+    private function getApiUrl ($args = null)
+    {
+        return (isset($args) && is_array($args)) ? self::api . '?' .
+                 http_build_query($args, '', '&') : self::api;
     }
 }
