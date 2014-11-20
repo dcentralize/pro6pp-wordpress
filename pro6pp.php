@@ -471,14 +471,8 @@ class Pro6pp
     private function validate_referer ()
     {
         $errorMsg = "An error occured, please contact the site's administrator.";
-        if (! isset($_SERVER['HTTP_REFERER'])) {
-            $this->error_occured($errorMsg);
-        }
-        // Replace the backslashes from protocol and the path seperators.
-        $siteRegex = preg_replace('/(\/)/', '\/', site_url());
         // Match the referer contains this site's url.
-        if (! preg_match('/' . $siteRegex . '/i',
-                urldecode($_SERVER['HTTP_REFERER']))) {
+        if (! wp_get_referer()) {
             $this->error_occured($errorMsg);
         }
     }
