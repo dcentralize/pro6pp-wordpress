@@ -321,7 +321,7 @@ class Pro6pp
         $api = 'http://api.pro6pp.nl/v1/autocomplete?';
         $data = http_build_query(
                 array(
-                        'auth_key' => 'dsa',
+                        'auth_key' => get_option('pro6pp_auth_key', 'AUTH_KEY'),
                         'nl_sixpp' => wc_clean($_REQUEST['billing_postcode']),
                         'streetnumber' => wc_clean(
                                 $_REQUEST['billing_address_2'])
