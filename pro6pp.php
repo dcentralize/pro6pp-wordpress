@@ -192,7 +192,7 @@ class Pro6pp
         $this->_pro6pp = array(
                 'url' => admin_url('admin-ajax.php'),
                 'action' => $this->_ajaxAction,
-                'timeout' => get_option('pro6pp_timeout', 1),
+                'timeout' => (get_option('pro6pp_timeout', 3)*1000),
                 'spinnerSrc' => plugins_url('assets/ajax-loader.gif', __FILE__),
                 'countries' => $countryCodes,
                 'streetnumber' => __('Street Number', 'pro6pp_autocomplete'),
@@ -337,9 +337,9 @@ class Pro6pp
                 return;
             }
         } elseif ($result['body']['nl_sixpp'] !== $postcode) {
-            wc_add_notice(__("The <b>postcode</b> is not valid."), 'error');
+            wc_add_notice(__("Invalid postde."), 'error');
         } else {
-            wc_add_notice(__("The <b>postcode</b> is valid."), 'success');
+            wc_add_notice(__("Valid postcode."), 'success');
         }
     }
 
@@ -391,8 +391,9 @@ class Pro6pp
      */
     public function pro6pp_handle_request ()
     {
-        if (get_option('pro6pp_security', false))
+        if (get_option('pro6pp_security', false)){
             $this->validate_referer();
+        }
 
         if (empty($_GET['nl_sixpp']) || empty($_GET['streetnumber'])) {
             $this->error_occured('Empty postcode or streetnumber');
