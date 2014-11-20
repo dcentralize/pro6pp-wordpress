@@ -192,7 +192,7 @@ class Pro6pp
                 'url' => admin_url('admin-ajax.php'),
                 'action' => $this->_ajaxAction,
                 'timeout' => get_option('pro6pp_timeout', 1),
-                'spinnerSrc' => plugins_url('js/ajax-loader.gif', __FILE__),
+                'spinnerSrc' => plugins_url('assets/ajax-loader.gif', __FILE__),
                 'countries' => $countryCodes,
                 'streetnumber' => __('Street Number', 'pro6pp_autocomplete'),
                 // Localised error messages.
