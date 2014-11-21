@@ -14,6 +14,12 @@ class Pro6pp
 {
 
     /**
+     * The URL of the pro6pp API
+     * @var string
+     */
+    const api = 'http://api.pro6pp.nl/v1/autocomplete';
+
+    /**
      * The action name used to call the pro6pp asynchronously.
      *
      * @var string $_ajaxAction
@@ -147,28 +153,23 @@ class Pro6pp
                         'pro6pp_address_validation'
                 ));
 
-        // Create custom postcode and streetnumber fields.
-        add_filter('woocommerce_checkout_fields',
-                array(
-                        $this,
-                        'custom_override_checkout_fields'
-                ));
+        if (get_option('pro6pp_override_defaults', false)) {
+            // Create custom postcode and streetnumber fields.
+            add_filter('woocommerce_checkout_fields',
+                    array(
+                            $this,
+                            'pro6pp_override_checkout_fields'
+                    ));
+        }
 
-        // Manipulate the default address fields.
-        add_filter('woocommerce_default_address_fields',
-                array(
-                        $this,
-                        'custom_override_default_address_fields'
-                ));
-
-        // Add provinces for the supported countries.
-        add_filter('woocommerce_states',
-                array(
-                        $this,
-                        'custom_woocommerce_states'
-                ));
-
-        // add_filter();
+        if (get_option('pro6pp_override_address', false)) {
+            // Add provinces for the supported countries.
+            add_filter('woocommerce_states',
+                    array(
+                            $this,
+                            'pro6pp_woocommerce_states'
+                    ));
+        }
 
         // Ajax - Logged in users.
         add_action("wp_ajax_$this->_ajaxAction",
@@ -191,8 +192,8 @@ class Pro6pp
         $this->_pro6pp = array(
                 'url' => admin_url('admin-ajax.php'),
                 'action' => $this->_ajaxAction,
-                'timeout' => get_option('pro6pp_timeout', 1),
-                'spinnerSrc' => plugins_url('js/ajax-loader.gif', __FILE__),
+                'timeout' => (get_option('pro6pp_timeout', 3)*1000),
+                'spinnerSrc' => plugins_url('assets/ajax-loader.gif', __FILE__),
                 'countries' => $countryCodes,
                 'streetnumber' => __('Street Number', 'pro6pp_autocomplete'),
                 // Localised error messages.
@@ -214,7 +215,7 @@ class Pro6pp
      *            An array holding the default states known to WC.
      * @return {array} The states after manipulation.
      */
-    function custom_woocommerce_states ($states)
+    function pro6pp_woocommerce_states ($states)
     {
         $provinces;
         foreach (self::$_countries as $cc => $province) {
@@ -236,7 +237,7 @@ class Pro6pp
      *            The default options for the address fields
      * @return {array} The input array manipulated
      */
-    function custom_override_default_address_fields ($address_fields)
+    function pro6pp_override_default_address_fields ($address_fields)
     {
         $address_fields['address_2']['label'] = __('Streetnumber',
                 'woocommerce');
@@ -255,7 +256,7 @@ class Pro6pp
      *            The checkout fields to render.
      * @return {array} The input array manipulated.
      */
-    function custom_override_checkout_fields ($groups)
+    function pro6pp_override_checkout_fields ($groups)
     {
         $add_after_this = '_company';
         $knownFields = array(
@@ -307,26 +308,23 @@ class Pro6pp
     }
 
     /**
-     * Process the adress validation on submissionif it's supported
+     * Process the adress validation on submission if supported.
      */
     public function pro6pp_address_validation ()
     {
-        global $wp_http;
         // Check that fields were sent.
         if (empty($_REQUEST['billing_country']) || empty(
                 $_REQUEST['billing_postcode'])) {
             return;
         }
 
-        $api = 'http://api.pro6pp.nl/v1/autocomplete?';
-        $data = http_build_query(
-                array(
-                        'auth_key' => 'dsa',
+        $data = array(
+                        'auth_key' => get_option('pro6pp_auth_key', 'AUTH_KEY'),
                         'nl_sixpp' => wc_clean($_REQUEST['billing_postcode']),
                         'streetnumber' => wc_clean(
                                 $_REQUEST['billing_address_2'])
-                ), '', '&');
-        $url = $api . $data;
+                );
+        $url = $this->getApiUrl($data);
         $http = new WP_Http();
         $result = $http->request($url,
                 array( // Convert seconds to miliseconds.
@@ -339,9 +337,9 @@ class Pro6pp
                 return;
             }
         } elseif ($result['body']['nl_sixpp'] !== $postcode) {
-            wc_add_notice(__("The <b>postcode</b> is not valid."), 'error');
+            wc_add_notice(__("Invalid postde."), 'error');
         } else {
-            wc_add_notice(__("The <b>postcode</b> is valid."), 'success');
+            wc_add_notice(__("Valid postcode."), 'success');
         }
     }
 
@@ -393,8 +391,9 @@ class Pro6pp
      */
     public function pro6pp_handle_request ()
     {
-        if (get_option('pro6pp_security', false))
+        if (get_option('pro6pp_security', false)){
             $this->validate_referer();
+        }
 
         if (empty($_GET['nl_sixpp']) || empty($_GET['streetnumber'])) {
             $this->error_occured('Empty postcode or streetnumber');
@@ -418,17 +417,16 @@ class Pro6pp
         if (! $postcode || ! $streetNr) {
             $this->error_occured('Invalid postcode or Streetnumber');
         }
-        $api = 'http://api.pro6pp.nl/v1/autocomplete?';
-        $data = http_build_query(
-                array(
+
+        $data = array(
                         'auth_key' => $key,
                         'nl_sixpp' => $pMatches[0],
                         'streetnumber' => $sMatches[0]
-                ), '', '&');
+                );
         unset($pMatches, $sMatches);
+        $url = $this->getApiUrl($data);
 
         // Initiate the request to the pro6pp service.
-        $url = $api . $data;
         $pro6ppService = new WP_Http();
         $result = $pro6ppService->request($url,
                 array( // Convert seconds to miliseconds.
@@ -452,6 +450,9 @@ class Pro6pp
      */
     private function error_occured ($msg)
     {
+        if (! headers_sent()) {
+            header("Content-Type: application/json");
+        }
         $this->_returnError['error']['message'] = __($msg,
                 'pro6pp_autocomplete');
         echo json_encode($this->_returnError);
@@ -468,14 +469,8 @@ class Pro6pp
     private function validate_referer ()
     {
         $errorMsg = "An error occured, please contact the site's administrator.";
-        if (! isset($_SERVER['HTTP_REFERER'])) {
-            $this->error_occured($errorMsg);
-        }
-        // Replace the backslashes from protocol and the path seperators.
-        $siteRegex = preg_replace('/(\/)/', '\/', site_url());
         // Match the referer contains this site's url.
-        if (! preg_match('/' . $siteRegex . '/i',
-                urldecode($_SERVER['HTTP_REFERER']))) {
+        if (! wp_get_referer()) {
             $this->error_occured($errorMsg);
         }
     }
@@ -503,15 +498,14 @@ class Pro6pp
                     plugins_url('/js/pro6pp_reorder.js', __FILE__),
                     array(
                             'jquery',
-                            'woocommerce'
-                    ));
+                            'woocommerce',
+                            'wc-country-select'
+                    ),'',true);
             wp_register_script('pro6pp_autocomplete',
                     plugins_url('/js/pro6pp_autocomplete.js', __FILE__),
                     array(
-                            'jquery',
-                            'woocommerce',
                             'pro6pp_reorder'
-                    ));
+                    ), '', true);
 
             // Add the scripts to the page.
             wp_enqueue_script('pro6pp_reorder');
@@ -563,5 +557,19 @@ class Pro6pp
                         self::$_shipping);
             break;
         }
+    }
+
+    /**
+     * Get the URL to the pro6pp API.
+     * If an array is given, it will append the values as URL parameters.
+     *
+     * @param Array $args (Optional) An array of parameters to append to the
+     *            URL.
+     * @return string The URL to the API, with possible parameters.
+     */
+    private function getApiUrl ($args = null)
+    {
+        return (isset($args) && is_array($args)) ? self::api . '?' .
+                 http_build_query($args, '', '&') : self::api;
     }
 }
