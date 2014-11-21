@@ -119,20 +119,25 @@ class Pro6pp
                         $this,
                         'load_translation'
                 ));
+
         // Get the settings page.
         require_once (sprintf("%s/settings.php", dirname(__FILE__)));
+
         // Installation and uninstallation hooks
         register_activation_hook(__FILE__,
                 array(
                         'Pro6pp',
                         'activate'
                 ));
+
         register_deactivation_hook(__FILE__,
                 array(
                         'Pro6ppAutocomplete',
                         'deactivate'
                 ));
+
         $this->_settings = new Pro6ppSettings();
+
         // Add the settings link in the plugins page.
         add_filter("plugin_action_links_" . plugin_basename(__FILE__),
                 array(
@@ -146,12 +151,22 @@ class Pro6pp
                         $this,
                         'add_client_script'
                 ));
-        // Add custom validation for the address input.
-        add_action('woocommerce_checkout_process',
+
+            // Add provinces for the supported countries.
+        add_filter('woocommerce_states',
                 array(
                         $this,
-                        'pro6pp_address_validation'
+                        'pro6pp_woocommerce_states'
                 ));
+
+        if (get_option('pro6pp_override_address', false)) {
+            // Create custom postcode and streetnumber fields.
+            add_filter('woocommerce_checkout_fields',
+                    array(
+                            $this,
+                            'pro6pp_override_default_address_fields'
+                    ));
+        }
 
         if (get_option('pro6pp_override_defaults', false)) {
             // Create custom postcode and streetnumber fields.
@@ -162,31 +177,32 @@ class Pro6pp
                     ));
         }
 
-        if (get_option('pro6pp_override_address', false)) {
-            // Add provinces for the supported countries.
-            add_filter('woocommerce_states',
-                    array(
-                            $this,
-                            'pro6pp_woocommerce_states'
-                    ));
-        }
+            // Add custom validation for the address input.
+        add_action('woocommerce_checkout_process',
+                array(
+                        $this,
+                        'pro6pp_address_validation'
+                ));
 
-        // Ajax - Logged in users.
-        add_action("wp_ajax_$this->_ajaxAction",
+            // Ajax - Logged in users.
+        add_action(
+                "wp_ajax_$this->_ajaxAction",
                 array(
                         $this,
                         'pro6pp_handle_request'
                 ));
-        // Ajax - Guest users.
-        add_action("wp_ajax_nopriv_$this->_ajaxAction",
+            // Ajax - Guest users.
+        add_action(
+                "wp_ajax_nopriv_$this->_ajaxAction",
                 array(
                         $this,
                         'pro6pp_handle_request'
                 ));
 
         $countryCodes = array();
-        foreach (self::$_countries as $cc => $value)
+        foreach (self::$_countries as $cc => $value) {
             $countryCodes[] = is_numeric($cc) ? $value : $cc;
+        }
 
             // Generic variables for use in JavaScript.
         $this->_pro6pp = array(
@@ -205,6 +221,104 @@ class Pro6pp
                         'The Pro6PP service is currently unavailable.',
                         'pro6pp_autocomplete')
         );
+    }
+
+    /**
+     * Handle localization.
+     *
+     * @since 0.3
+     */
+    public function load_translation ()
+    {
+        load_plugin_textdomain('pro6pp_autocomplete', false,
+        dirname(plugin_basename(__FILE__)) . '/languages');
+    }
+
+    /**
+     * Activate the plugin
+     */
+    public static function activate ()
+    {
+        // Do nothing
+    }
+
+    /**
+     * Deactivate the plugin
+     */
+    public static function deactivate ()
+    {
+        // Do nothing
+    }
+
+
+    /**
+     * Add the "settings" link to the plugins page.
+     *
+     * @param Array $links
+     * @return Array:
+     */
+    public function pro6pp_settings_link ($links)
+    {
+        $settings = array(
+                'Settings' => sprintf('<a href="%s">%s</a>',
+                        admin_url('admin.php?page=pro6pp_autocomplete'),
+                        'Settings')
+        );
+        return array_merge($settings, $links);
+    }
+
+    /**
+     * Injects the required scripts and variables according to the form
+     * the user requested.
+     * Returns if not in scope.
+     *
+     * @param unknown $query
+     */
+    public function add_client_script ($query)
+    {
+        $editPage = false;
+        // Compatibility with WooCommerce < 2.1
+        if (function_exists('is_wc_endpoint_url')) {
+            $editPage = is_wc_endpoint_url('edit-address');
+        } else {
+            $editPage = $query->get('page_id') == wc_get_page_id('edit_address');
+        }
+
+        // Include the scripts only when relevant pages are requested.
+        if ($editPage || $query->get('page_id') == wc_get_page_id('checkout')) {
+            wp_register_script('pro6pp_reorder',
+            plugins_url('/js/pro6pp_reorder.js', __FILE__),
+            array(
+            'jquery',
+            'woocommerce',
+            'wc-country-select'
+                    ),'',true);
+                    wp_register_script('pro6pp_autocomplete',
+                    plugins_url('/js/pro6pp_autocomplete.js', __FILE__),
+                    array(
+                    'pro6pp_reorder'
+                            ), '', true);
+
+                    // Add the scripts to the page.
+                    wp_enqueue_script('pro6pp_reorder');
+                    wp_enqueue_script('pro6pp_autocomplete');
+
+                    // Distinguish the type of form.
+                    $form = 'both';
+                    if (isset($_GET['address'])) {
+                        if ($_GET['address'] == 'billing' ||
+                        $_GET['address'] == 'shipping')
+                            $form = esc_attr($_GET['address']);
+                    }
+
+                    // Inject the generic variables for both scripts.
+                    wp_localize_script('pro6pp_autocomplete', 'pro6pp', $this->_pro6pp);
+                    wp_localize_script('pro6pp_reorder', 'pro6pp', $this->_pro6pp);
+
+                    // Inject the form variables.
+                    $this->localizeFormVariables($form);
+        } else
+            return;
     }
 
     /**
@@ -344,49 +458,6 @@ class Pro6pp
     }
 
     /**
-     * Handle localization.
-     *
-     * @since 0.3
-     */
-    public function load_translation ()
-    {
-        load_plugin_textdomain('pro6pp_autocomplete', false,
-                dirname(plugin_basename(__FILE__)) . '/languages');
-    }
-
-    /**
-     * Activate the plugin
-     */
-    public static function activate ()
-    {
-        // Do nothing
-    }
-
-    /**
-     * Deactivate the plugin
-     */
-    public static function deactivate ()
-    {
-        // Do nothing
-    }
-
-    /**
-     * Add the "settings" link to the plugins page.
-     *
-     * @param Array $links
-     * @return Array:
-     */
-    public function pro6pp_settings_link ($links)
-    {
-        $settings = array(
-                'Settings' => sprintf('<a href="%s">%s</a>',
-                        admin_url('admin.php?page=pro6pp_autocomplete'),
-                        'Settings')
-        );
-        return array_merge($settings, $links);
-    }
-
-    /**
      * Accepts the frontend ajax request
      */
     public function pro6pp_handle_request ()
@@ -443,6 +514,50 @@ class Pro6pp
     }
 
     /**
+     * Passes the initializing variables for the JavaScript scripts,
+     * according to the rendered form.
+     * When called, the autocomplete script needs to be already
+     * registered and enqued with the respective WP functions.
+     *
+     * @param {string} $formType
+     *            Is one of the two: "shipping", "billing".
+     *            Otherwise it defaults to output both scripts.
+     */
+    private function localizeFormVariables ($formType)
+    {
+        switch ($formType) {
+            case 'billing':
+                wp_localize_script('pro6pp_autocomplete', 'billing_fields',
+                self::$_billing);
+                break;
+            case 'shipping':
+                wp_localize_script('pro6pp_autocomplete', 'shipping_fields',
+                self::$_shipping);
+                break;
+            default: // Both
+                wp_localize_script('pro6pp_autocomplete', 'billing_fields',
+                self::$_billing);
+                wp_localize_script('pro6pp_autocomplete', 'shipping_fields',
+                self::$_shipping);
+                break;
+        }
+    }
+
+    /**
+     * Get the URL to the pro6pp API.
+     * If an array is given, it will append the values as URL parameters.
+     *
+     * @param Array $args (Optional) An array of parameters to append to the
+     *            URL.
+     * @return string The URL to the API, with possible parameters.
+     */
+    private function getApiUrl ($args = null)
+    {
+        return (isset($args) && is_array($args)) ? self::api . '?' .
+                http_build_query($args, '', '&') : self::api;
+    }
+
+    /**
      * Responds an error in JSON format and exits the script.
      *
      * @param {string} $msg
@@ -469,107 +584,10 @@ class Pro6pp
     private function validate_referer ()
     {
         $errorMsg = "An error occured, please contact the site's administrator.";
-        // Match the referer contains this site's url.
-        if (! wp_get_referer()) {
+        // Match the referer to the site's url.
+        preg_match('~'.site_url().'~', $_SERVER['HTTP_REFERER'],$matches);
+        if (! wp_get_referer() || ! isset($matches[0])) {
             $this->error_occured($errorMsg);
         }
-    }
-
-    /**
-     * Injects the required scripts and variables according to the form
-     * the user requested.
-     * Returns if not in scope.
-     *
-     * @param unknown $query
-     */
-    public function add_client_script ($query)
-    {
-        $editPage = false;
-        // Compatibility with WooCommerce < 2.1
-        if (function_exists('is_wc_endpoint_url')) {
-            $editPage = is_wc_endpoint_url('edit-address');
-        } else {
-            $editPage = $query->get('page_id') == wc_get_page_id('edit_address');
-        }
-
-        // Include the scripts only when relevant pages are requested.
-        if ($editPage || $query->get('page_id') == wc_get_page_id('checkout')) {
-            wp_register_script('pro6pp_reorder',
-                    plugins_url('/js/pro6pp_reorder.js', __FILE__),
-                    array(
-                            'jquery',
-                            'woocommerce',
-                            'wc-country-select'
-                    ),'',true);
-            wp_register_script('pro6pp_autocomplete',
-                    plugins_url('/js/pro6pp_autocomplete.js', __FILE__),
-                    array(
-                            'pro6pp_reorder'
-                    ), '', true);
-
-            // Add the scripts to the page.
-            wp_enqueue_script('pro6pp_reorder');
-            wp_enqueue_script('pro6pp_autocomplete');
-
-            // Distinguish the type of form.
-            $form = 'both';
-            if (isset($_GET['address'])) {
-                if ($_GET['address'] == 'billing' ||
-                         $_GET['address'] == 'shipping')
-                    $form = esc_attr($_GET['address']);
-            }
-
-            // Inject the generic variables for both scripts.
-            wp_localize_script('pro6pp_autocomplete', 'pro6pp', $this->_pro6pp);
-            wp_localize_script('pro6pp_reorder', 'pro6pp', $this->_pro6pp);
-
-            // Inject the form variables.
-            $this->localizeFormVariables($form);
-        } else
-            return;
-    }
-
-    /**
-     * Passes the initializing variables for the JavaScript scripts,
-     * according to the rendered form.
-     * When called, the autocomplete script needs to be already
-     * registered and enqued with the respective WP functions.
-     *
-     * @param {string} $formType
-     *            Is one of the two: "shipping", "billing".
-     *            Otherwise it defaults to output both scripts.
-     */
-    public function localizeFormVariables ($formType)
-    {
-        switch ($formType) {
-            case 'billing':
-                wp_localize_script('pro6pp_autocomplete', 'billing_fields',
-                        self::$_billing);
-            break;
-            case 'shipping':
-                wp_localize_script('pro6pp_autocomplete', 'shipping_fields',
-                        self::$_shipping);
-            break;
-            default: // Both
-                wp_localize_script('pro6pp_autocomplete', 'billing_fields',
-                        self::$_billing);
-                wp_localize_script('pro6pp_autocomplete', 'shipping_fields',
-                        self::$_shipping);
-            break;
-        }
-    }
-
-    /**
-     * Get the URL to the pro6pp API.
-     * If an array is given, it will append the values as URL parameters.
-     *
-     * @param Array $args (Optional) An array of parameters to append to the
-     *            URL.
-     * @return string The URL to the API, with possible parameters.
-     */
-    private function getApiUrl ($args = null)
-    {
-        return (isset($args) && is_array($args)) ? self::api . '?' .
-                 http_build_query($args, '', '&') : self::api;
     }
 }
