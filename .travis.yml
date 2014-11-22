@@ -1,16 +1,22 @@
 language: php
 
-php:
-    - 5.3
-    - 5.4
-
+branches:
+  only:
+    - master
 env:
     global:
     - secure: Woh7BmZy1g4G0NzgD405bko4/83jQiXzbiuOnwJD2BaMpG8JYjR5eb9AS3XhlH+ySZKOYm6i9Btz+uVuKAGZqNgr/gnQytWeY7UL1X74IfemuPlDS6W5eQAZ3NgfQAN50DE5kB9BfpEMIdlifM2GtYmkX+j+3k0KfG1bjwvK5yI=
-    - WP_VERSION=latest WP_MULTISITE=0
-    - WP_VERSION=latest WP_MULTISITE=1
-    - WP_VERSION=3.8 WP_MULTISITE=0
-    - WP_VERSION=3.8 WP_MULTISITE=1
+
+matrix:
+  include:
+  - php: '5.4'
+    env: WP_VERSION=latest WP_MULTISITE=0
+  - php: '5.4'
+    env: WP_VERSION=latest WP_MULTISITE=1
+  - php: '5.3'
+    env: WP_VERSION=3.8 WP_MULTISITE=0
+  - php: '5.3'
+    env: WP_VERSION=3.8 WP_MULTISITE=1
 
 before_script:
     - export REPO_BASE=`pwd`
