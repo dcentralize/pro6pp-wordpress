@@ -9,7 +9,6 @@ else
     $currentTab = 'connection';
 
 ?>
-
 <div class="wrap woocommerce">
   <form method="post" id="mainform" action="options.php"
     enctype="multipart/form-data">
@@ -19,36 +18,33 @@ else
     <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
 <?php
 // Print the tab menu
-foreach ($tabs as $page => $fields) {
+foreach ($tabs as $page => $fields) :
     // Define the css class for active/inactive tab.
     $class = ($page === $currentTab) ? 'nav-tab nav-tab-active' : 'nav-tab';
     // Define the page link
-    $url = add_query_arg(
+    $url = esc_url(add_query_arg(
         'tab',
         $page,
         admin_url('admin.php?page=pro6pp_autocomplete')
-    );
+    ));
     // Print the header
     printf('<a href="%s" class="%s">%s</a>', $url, $class, ucfirst($page));
-}
+endforeach;
 ?>
     </h2>
 <?php
 // Display message on save.
 if (isset($_GET['settings-updated']) && ! empty($_GET['settings-updated']) && $currentTab == 'configuration') :
     ?>
-        <div id="message" class="updated fade below-h2">
+    <div id="message" class="updated fade below-h2">
       <p>
         <strong>
         <?php
             echo __('Your settings have been saved.', 'pro6pp_autocomplete');
             ?>
         </strong>
-
       </p>
     </div>
-
-
 <?php
 endif;
 // Print the security fields for that group.
